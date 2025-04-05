@@ -7,3 +7,8 @@ When you're ready, delete this note and make the vault your own.
 hello test
 
 new line ㅎㅎ
+
+# some fold thiing
+## some fold really?
+
+hello world this is MD file with folded feature
