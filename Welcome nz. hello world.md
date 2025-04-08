@@ -8,7 +8,7 @@ hello test
 
 new line ㅎㅎ
 
-# some fold thiing
+# some fold thing
 ## some fold really?
 
 hello world this is MD file with folded feature
