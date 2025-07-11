@@ -9,5 +9,5 @@ RAG 질문 내용에 프롬프트를 "증강" 처리.
 
 ### MCP
 툴 : 인터넷 검색, 레스토랑 메뉴 예약 API
-툴을 추가 연동하여 agent 의 기능을 강화
+툴을 추가 연동하여 agent 의 기능을 강화 #BedrockAgent
 COT, chain of thought 를 활용
