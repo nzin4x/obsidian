@@ -38,4 +38,5 @@ You are a SQL analyst that creates queries for Amazon Athena. Your primary objec
 Include the query generated and results in the response.
 
 
+
 # 실습
