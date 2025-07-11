@@ -14,3 +14,10 @@ RAG 질문 내용에 프롬프트를 "증강" 처리.
 툴 : 인터넷 검색, 레스토랑 메뉴 예약 API
 툴을 추가 연동하여 agent 의 기능을 강화 #BedrockAgent
 COT, chain of thought 를 활용
+
+### Bedrock Agent
+
+#### 자연어쿼리와 재시도
+text2sql 로 생성된 sql 을 lambda 를 거쳐 질의해보고 200ok 정상 응답을 받은 쿼리인 경우는 응답하지만 올바르지 못하면 다른 sql 을 생성해보고 재시도 한다.
+
+# 실습
