@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { PublishedNote } from '../types';
 import { NoteView } from './NoteView';
 import publishedNotes from '../publishedList.json';
@@ -7,18 +8,29 @@ import './Notes.css';
 export function NotesContainer() {
   const [notes] = useState<PublishedNote[]>(() => publishedNotes as PublishedNote[]);
   const [selectedNote, setSelectedNote] = useState<PublishedNote | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // URL에서 노트 선택 처리
   useEffect(() => {
-    const path = window.location.pathname.replace(/^\/notes\//, '');
+    const path = decodeURIComponent(location.pathname.replace(/^\/notes\//, ''));
     if (path) {
       const note = notes.find((n: PublishedNote) => n.path === path);
-      if (note) setSelectedNote(note);
+      if (note) {
+        setSelectedNote(note);
+      } else if (notes.length > 0) {
+        // URL에 해당하는 노트를 찾지 못한 경우 첫 번째 노트로
+        const firstNote = notes[0];
+        setSelectedNote(firstNote);
+        navigate(`/notes/${firstNote.path}`);
+      }
     } else if (notes.length > 0) {
       // 기본값으로 첫 번째 노트 선택
-      setSelectedNote(notes[0]);
+      const firstNote = notes[0];
+      setSelectedNote(firstNote);
+      navigate(`/notes/${firstNote.path}`);
     }
-  }, [notes]);
+  }, [notes, location.pathname, navigate]);
 
   // 빈 상태 처리
   if (notes.length === 0) {
@@ -42,8 +54,8 @@ export function NotesContainer() {
               className={`note-item ${selectedNote?.path === note.path ? 'selected' : ''}`}
               onClick={() => {
                 setSelectedNote(note);
-                // URL 업데이트
-                window.history.pushState(null, '', `/notes/${note.path}`);
+                // React Router를 사용하여 URL 업데이트
+                navigate(`/notes/${encodeURIComponent(note.path)}`);
               }}
             >
               <div className="note-item-title">

@@ -22,6 +22,19 @@ export function NoteView({ note }: NoteViewProps) {
     }
   }, [note.frontmatter.date]);
 
+  // Obsidian 이미지 문법을 변환하는 함수
+  const processContent = useMemo(() => {
+    // Obsidian 이미지 문법을 표준 마크다운으로 변환
+    return note.content.replace(
+      /!\[\[(.*?)\]\]/g,
+      (_, filename) => {
+        // 파일명을 정리하고 /assets/ 경로를 추가
+        const cleanFilename = filename.trim();
+        return `![${cleanFilename}](/assets/${encodeURIComponent(cleanFilename)})`;
+      }
+    );
+  }, [note.content]);
+
   return (
     <article className="note">
       {/* 노트 헤더 */}
@@ -40,7 +53,7 @@ export function NoteView({ note }: NoteViewProps) {
       </header>
 
       {/* 노트 내용 */}
-      <div className="note-content">
+      <div className="note-content markdown-body">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -48,25 +61,22 @@ export function NoteView({ note }: NoteViewProps) {
             img: ({ src, alt, ...props }) => {
               if (!src) return null;
               
-              // /assets/로 시작하는 이미지는 public 폴더에서 로드
-              if (src.startsWith('/assets/')) {
-                return (
-                  <img
-                    {...props}
-                    src={src}
-                    alt={alt || ''}
-                    loading="lazy"
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      img.style.border = '1px solid #ff0000';
-                      img.title = '이미지를 찾을 수 없습니다';
-                    }}
-                  />
-                );
-              }
-
-              // 외부 이미지는 그대로 표시
-              return <img {...props} src={src} alt={alt || ''} loading="lazy" />;
+              // src가 이미 /assets/로 시작하면 그대로 사용
+              const imagePath = src.startsWith('/assets/') ? src : `/assets/${encodeURIComponent(src)}`;
+              
+              return (
+                <img
+                  {...props}
+                  src={imagePath}
+                  alt={alt || ''}
+                  loading="lazy"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    img.style.border = '1px solid #ff0000';
+                    img.title = '이미지를 찾을 수 없습니다';
+                  }}
+                />
+              );
             },
 
             // 링크 처리
@@ -87,7 +97,7 @@ export function NoteView({ note }: NoteViewProps) {
             }
           }}
         >
-          {note.content}
+          {processContent}
         </ReactMarkdown>
       </div>
     </article>

@@ -10,9 +10,9 @@
 /* 사이드바 스타일링 */
 .notes-sidebar {
   padding: 1rem;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--border-color);
   overflow-y: auto;
-  background-color: #f9fafb;
+  background-color: var(--sidebar-bg);
 }
 
 .sidebar-title {
