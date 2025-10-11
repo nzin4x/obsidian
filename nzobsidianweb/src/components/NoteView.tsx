@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { PublishedNote } from '../types';
-import { Tldraw, createTLStore } from '@tldraw/tldraw';
+import { Tldraw } from '@tldraw/tldraw';
 import '@tldraw/tldraw/tldraw.css';
 
 interface NoteViewProps {
