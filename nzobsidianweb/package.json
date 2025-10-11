@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tldraw/tldraw": "^4.0.3",
     "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
     "react": "^19.1.1",

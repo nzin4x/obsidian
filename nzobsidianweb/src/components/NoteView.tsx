@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { PublishedNote } from '../types';
+import { Tldraw } from '@tldraw/tldraw';
 
 interface NoteViewProps {
   note: PublishedNote;
@@ -94,6 +95,34 @@ export function NoteView({ note }: NoteViewProps) {
 
               // 내부 링크
               return <a href={href}>{children}</a>;
+            },
+
+            // 코드 블록 처리
+            code: ({ className, children }) => {
+              // handdrawn-ink 코드 블록 처리
+              if (className === 'language-handdrawn-ink' && children) {
+                try {
+                  const config = JSON.parse(children.toString());
+                  const width = config.width || 500;
+                  const aspectRatio = config.aspectRatio || 1;
+
+                  return (
+                    <div style={{ width, height: width * aspectRatio, margin: '1rem 0', border: '1px solid #eee' }}>
+                      <Suspense fallback={<div>로딩 중...</div>}>
+                        <div style={{ position: 'relative', width: '100%', height: '400px' }}>
+                          <Tldraw />
+                        </div>
+                      </Suspense>
+                    </div>
+                  );
+                } catch (e) {
+                  console.error('Failed to parse handdrawn-ink config:', e);
+                  return <pre>{children}</pre>;
+                }
+              }
+
+              // 기본 코드 블록 처리
+              return <pre><code className={className}>{children}</code></pre>;
             }
           }}
         >

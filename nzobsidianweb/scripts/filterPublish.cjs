@@ -107,11 +107,11 @@ function deleteIfExists(filePath) {
   }
 }
 
-// 이미지 파일 복사
+// 이미지와 drawing 파일 복사
 function copyAsset(sourcePath, targetPath) {
   try {
     if (!fs.existsSync(sourcePath)) {
-      console.warn(`  ├ ⚠️ 원본 이미지 없음: ${sourcePath}`);
+      console.warn(`  ├ ⚠️ 원본 파일 없음: ${sourcePath}`);
       return false;
     }
 
@@ -119,10 +119,21 @@ function copyAsset(sourcePath, targetPath) {
     ensureDir(targetDir);
     
     fs.copyFileSync(sourcePath, targetPath);
-    console.log(`  ├ ✅ 이미지 복사됨: ${path.relative(vaultRoot, sourcePath)} -> ${path.relative(projectDir, targetPath)}`);
+    console.log(`  ├ ✅ 파일 복사됨: ${path.relative(vaultRoot, sourcePath)} -> ${path.relative(projectDir, targetPath)}`);
+
+    // drawing 파일인 경우 .writing 파일도 확인하여 복사
+    if (sourcePath.endsWith('.drawing')) {
+      const writingPath = sourcePath.replace('.drawing', '.writing');
+      const writingTargetPath = targetPath.replace('.drawing', '.writing');
+      if (fs.existsSync(writingPath)) {
+        fs.copyFileSync(writingPath, writingTargetPath);
+        console.log(`  ├ ✅ writing 파일 복사됨: ${path.relative(vaultRoot, writingPath)} -> ${path.relative(projectDir, writingTargetPath)}`);
+      }
+    }
+
     return true;
   } catch (e) {
-    console.warn(`  ├ ⚠️ 이미지 복사 실패: ${sourcePath}`, e);
+    console.warn(`  ├ ⚠️ 파일 복사 실패: ${sourcePath}`, e);
     return false;
   }
 }
@@ -139,8 +150,8 @@ async function main() {
 
   console.log('🔍 문서와 이미지 스캔 시작...');
   
-  // 먼저 Markdown 파일만 탐색하여 publish된 파일 목록 확보
-  const mdEntries = await fg(["**/*.md"], {
+  // Markdown과 drawing 파일 탐색하여 publish된 파일 목록 확보
+  const mdEntries = await fg(["**/*.md", "**/Ink/**/*.drawing"], {
     cwd: vaultRoot,
     dot: true,
     absolute: true,
@@ -158,30 +169,60 @@ async function main() {
     const tagsArray = Array.isArray(rawTags) ? rawTags : rawTags.split(/[,\s]+/);
     const normalizedTags = tagsArray.map(t => String(t).toLowerCase().trim()).filter(Boolean);
 
-    if (normalizedTags.includes("publish")) {
-      publishedDocs.add(file);
-      
-      // 이미지 링크 추출 (![[이미지]] 형식과 ![alt](이미지) 형식 모두)
-      const imageMatches = mdContent.matchAll(/(?:!\[\[([^\]]+)\]\])|(?:!\[[^\]]*\]\(([^)]+)\))/g);
-      for (const match of imageMatches) {
-        const imagePath = match[1] || match[2];
-        if (!imagePath.startsWith('http')) {
-          const fullPath = path.resolve(path.dirname(file), imagePath);
-          requiredImages.add(fullPath);
+      if (normalizedTags.includes("publish") || file.endsWith('.drawing')) {
+        publishedDocs.add(file);
+        
+        if (file.endsWith('.drawing')) {
+          // drawing 파일 자체도 복사
+          requiredImages.add(file);
+          // .writing 파일도 있다면 함께 복사
+          const writingPath = file.replace('.drawing', '.writing');
+          if (fs.existsSync(writingPath)) {
+            requiredImages.add(writingPath);
+          }
+        } else {
+          // 이미지 링크 추출 (![[이미지]] 형식과 ![alt](이미지) 형식 모두)
+          const imageMatches = mdContent.matchAll(/(?:!\[\[([^\]]+)\]\])|(?:!\[[^\]]*\]\(([^)]+)\))/g);
+          for (const match of imageMatches) {
+            const imagePath = match[1] || match[2];
+            if (!imagePath.startsWith('http')) {
+              const fullPath = path.resolve(path.dirname(file), imagePath);
+              requiredImages.add(fullPath);
+            }
+          }
+        }      // handdrawn-ink 코드 블록 처리
+      const inkMatches = mdContent.matchAll(/```handdrawn-ink\s*({[\s\S]*?})\s*```/g);
+      for (const match of inkMatches) {
+        try {
+          const config = JSON.parse(match[1]);
+          if (config.filepath) {
+            // .drawing 파일 복사
+            const drawingPath = path.resolve(vaultRoot, config.filepath);
+            const fullPath = drawingPath.replace(/\\/g, '/');
+            requiredImages.add(fullPath);
+            
+            // .writing 파일도 있다면 함께 복사
+            const writingPath = drawingPath.replace('.drawing', '.writing');
+            if (fs.existsSync(writingPath)) {
+              requiredImages.add(writingPath.replace(/\\/g, '/'));
+            }
+          }
+        } catch (e) {
+          console.warn(`  ├ ⚠️ handdrawn-ink 설정 파싱 실패:`, e);
         }
       }
     }
   }
 
-  // 이미지 파일 목록 탐색
-  const imageEntries = await fg(["**/*.{png,jpg,jpeg,gif,webp,svg}"], {
+  // 이미지와 drawing 파일 목록 탐색
+  const assetEntries = await fg(["**/*.{png,jpg,jpeg,gif,webp,svg,drawing,writing}"], {
     cwd: vaultRoot,
     dot: true,
     absolute: true,
     ignore: ["node_modules/**", "src/**", `${projectName}/**`],
   });
 
-  const entries = [...publishedDocs, ...imageEntries.filter(img => requiredImages.has(img))];
+  const entries = [...publishedDocs, ...assetEntries.filter(asset => requiredImages.has(asset))];
 
   const publishedFiles = [];
 
@@ -192,6 +233,13 @@ async function main() {
       const relativePath = path.relative(vaultRoot, file);
       console.log(`\n검사중: ${relativePath}`);
       
+      // drawing 파일이면 assets로 복사
+      if (file.endsWith('.drawing') || file.endsWith('.writing')) {
+        const relativeToVault = path.relative(vaultRoot, file);
+        const targetPath = path.join(publicAssetsDir, relativeToVault);
+        copyAsset(file, targetPath);
+        continue;
+      }
       // Markdown 파일에서 이미지 참조 수집
       if (file.endsWith('.md')) {
         const content = fs.readFileSync(file, "utf-8");
