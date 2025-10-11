@@ -1,8 +1,9 @@
-import { useMemo, Suspense } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { PublishedNote } from '../types';
-import { Tldraw } from '@tldraw/tldraw';
+import { Tldraw, createTLStore } from '@tldraw/tldraw';
+import '@tldraw/tldraw/tldraw.css';
 
 interface NoteViewProps {
   note: PublishedNote;
@@ -106,13 +107,34 @@ export function NoteView({ note }: NoteViewProps) {
                   const width = config.width || 500;
                   const aspectRatio = config.aspectRatio || 1;
 
+                  // drawing 파일 경로 구성
+                  const drawingPath = `/assets/${config.filepath}`;
+                  const [drawingData, setDrawingData] = useState<any>(null);
+
+                  useEffect(() => {
+                    fetch(drawingPath)
+                      .then(response => response.json())
+                      .then(data => {
+                        console.log('Drawing data loaded:', data);
+                        console.log('tldraw data structure:', JSON.stringify(data.tldraw, null, 2));
+                        setDrawingData(data.tldraw);
+                      })
+                      .catch(error => {
+                        console.error('Error loading drawing:', error);
+                      });
+                  }, [drawingPath]);
+
+                  if (!drawingData) {
+                    return <div>로딩 중...</div>;
+                  }
+                  
                   return (
-                    <div style={{ width, height: width * aspectRatio, margin: '1rem 0', border: '1px solid #eee' }}>
-                      <Suspense fallback={<div>로딩 중...</div>}>
-                        <div style={{ position: 'relative', width: '100%', height: '400px' }}>
-                          <Tldraw />
-                        </div>
-                      </Suspense>
+                    <div style={{ width, height: width / aspectRatio, margin: '1rem 0', border: '1px solid #eee' }}>
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <Tldraw
+                          snapshot={drawingData}
+                        />
+                      </div>
                     </div>
                   );
                 } catch (e) {
